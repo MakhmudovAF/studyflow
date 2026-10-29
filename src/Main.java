@@ -24,12 +24,12 @@ public class Main {
 
         System.out.println();
         System.out.println("Задача с id = 1:");
-        repository.findById(1).ifPresent(System.out::println);
+        repository.findById(1L).ifPresent(System.out::println);
 
         System.out.println();
         System.out.println("Количество задач: " + repository.size());
 
-        repository.deleteById(1);
+        repository.deleteById(1L);
 
         System.out.println();
         System.out.println("После удаления:");
