@@ -6,33 +6,37 @@ import studyflow.service.TaskService;
 import java.time.LocalDate;
 
 public class Main {
+
     public static void main(String[] args) {
-        TaskRepository repository = new TaskRepository();
-        TaskService service = new TaskService(repository);
+        TaskService service = new TaskService(new TaskRepository());
 
-        service.createTask(
-                "Изучить Collections",
-                "Разобраться с List, Set и Map",
-                Priority.HIGH,
-                LocalDate.of(2026, 11, 5)
-        );
+        service.createTask("Изучить Collections", "List, Set и Map", Priority.HIGH, LocalDate.now().plusDays(2));
+        service.createTask("Изучить Stream API", "filter и sorted", Priority.HIGH, LocalDate.now().plusDays(5));
+        service.createTask("Изучить HTTP", "HttpServer и HttpClient", Priority.MEDIUM, LocalDate.now().plusDays(10));
+        service.createTask("Старая задача", "Просроченная задача", Priority.LOW, LocalDate.now().minusDays(3));
 
-        service.createTask(
-                "Изучить Stream API",
-                "Разобраться с filter, map и sorted",
-                Priority.MEDIUM,
-                LocalDate.of(2026, 11, 10)
-        );
+        service.updateStatus(2L, TaskStatus.IN_PROGRESS);
+        service.updateStatus(3L, TaskStatus.DONE);
 
-        System.out.println("Исходные задачи:");
+        System.out.println("Все задачи:");
         service.getAllTasks().forEach(System.out::println);
 
-        service.updateStatus(1L, TaskStatus.IN_PROGRESS);
-        service.updatePriority(2L, Priority.HIGH);
-        service.updateTitle(2L, "Освоить Stream API");
+        System.out.println("\nHIGH:");
+        service.getTasksByPriority(Priority.HIGH).forEach(System.out::println);
 
-        System.out.println();
-        System.out.println("После изменений:");
-        service.getAllTasks().forEach(System.out::println);
+        System.out.println("\nПо дедлайну:");
+        service.getTasksSortedByDeadline().forEach(System.out::println);
+
+        System.out.println("\nПросроченные:");
+        service.getOverdueTasks().forEach(System.out::println);
+
+        System.out.println("\nПоиск \"stream\":");
+        service.searchByTitle("stream").forEach(System.out::println);
+
+        System.out.println("\nКоличество выполненных: " + service.getCompletedTaskCount());
+        System.out.println("Процент выполнения: " + service.getCompletionPercentage());
+
+        System.out.println("\nКоличество по статусам:");
+        service.countTasksByStatus().forEach((status, count) -> System.out.println(status + ": " + count));
     }
 }
