@@ -1,42 +1,45 @@
 import studyflow.model.Priority;
-import studyflow.model.TaskStatus;
 import studyflow.repository.TaskRepository;
 import studyflow.service.TaskService;
+import studyflow.storage.TaskFileStorage;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 
 public class Main {
 
     public static void main(String[] args) {
-        TaskService service = new TaskService(new TaskRepository());
+        TaskRepository repository = new TaskRepository();
+        TaskFileStorage fileStorage = new TaskFileStorage(Path.of("data", "tasks.txt"));
 
-        service.createTask("Изучить Collections", "List, Set и Map", Priority.HIGH, LocalDate.now().plusDays(2));
-        service.createTask("Изучить Stream API", "filter и sorted", Priority.HIGH, LocalDate.now().plusDays(5));
-        service.createTask("Изучить HTTP", "HttpServer и HttpClient", Priority.MEDIUM, LocalDate.now().plusDays(10));
-        service.createTask("Старая задача", "Просроченная задача", Priority.LOW, LocalDate.now().minusDays(3));
+        try {
+            fileStorage.load().forEach(repository::save);
 
-        service.updateStatus(2L, TaskStatus.IN_PROGRESS);
-        service.updateStatus(3L, TaskStatus.DONE);
+            TaskService service = new TaskService(repository);
 
-        System.out.println("Все задачи:");
-        service.getAllTasks().forEach(System.out::println);
+            if (service.getTaskCount() == 0) {
+                service.createTask(
+                        "Изучить Collections",
+                        "List, Set и Map",
+                        Priority.HIGH,
+                        LocalDate.now().plusDays(5)
+                );
 
-        System.out.println("\nHIGH:");
-        service.getTasksByPriority(Priority.HIGH).forEach(System.out::println);
+                service.createTask(
+                        "Изучить Stream API",
+                        "filter, map и sorted",
+                        Priority.MEDIUM,
+                        LocalDate.now().plusDays(10)
+                );
+            }
 
-        System.out.println("\nПо дедлайну:");
-        service.getTasksSortedByDeadline().forEach(System.out::println);
+            System.out.println("Задачи:");
+            service.getAllTasks().forEach(System.out::println);
 
-        System.out.println("\nПросроченные:");
-        service.getOverdueTasks().forEach(System.out::println);
-
-        System.out.println("\nПоиск \"stream\":");
-        service.searchByTitle("stream").forEach(System.out::println);
-
-        System.out.println("\nКоличество выполненных: " + service.getCompletedTaskCount());
-        System.out.println("Процент выполнения: " + service.getCompletionPercentage());
-
-        System.out.println("\nКоличество по статусам:");
-        service.countTasksByStatus().forEach((status, count) -> System.out.println(status + ": " + count));
+            fileStorage.save(service.getAllTasks());
+        } catch (IOException exception) {
+            System.out.println("Ошибка работы с файлом: " + exception.getMessage());
+        }
     }
 }

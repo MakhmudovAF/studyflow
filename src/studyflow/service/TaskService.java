@@ -17,10 +17,14 @@ import java.util.stream.Collectors;
 public class TaskService {
 
     private final Repository<Task, Long> taskRepository;
-    private long nextId = 1;
+    private long nextId;
 
     public TaskService(Repository<Task, Long> taskRepository) {
         this.taskRepository = taskRepository;
+        this.nextId = taskRepository.findAll().stream()
+                .mapToLong(Task::getId)
+                .max()
+                .orElse(0L) + 1;
     }
 
     public Task createTask(String title, String description, Priority priority, LocalDate deadline) {
