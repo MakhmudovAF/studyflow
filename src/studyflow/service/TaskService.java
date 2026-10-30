@@ -1,5 +1,7 @@
 package studyflow.service;
 
+import studyflow.exception.TaskNotFoundException;
+import studyflow.exception.ValidationException;
 import studyflow.model.Priority;
 import studyflow.model.Task;
 import studyflow.model.TaskStatus;
@@ -22,20 +24,23 @@ public class TaskService {
     }
 
     public Task createTask(String title, String description, Priority priority, LocalDate deadline) {
+        validateTask(title, priority, deadline);
+
         Task task = new Task(nextId++, title, description, TaskStatus.TODO, priority, deadline);
         return taskRepository.save(task);
     }
 
-    public Optional<Task> getTaskById(long id) {
-        return taskRepository.findById(id);
+    public Task getTaskById(long id) {
+        return getTaskOrThrow(id);
     }
 
     public List<Task> getAllTasks() {
         return taskRepository.findAll();
     }
 
-    public boolean deleteTask(long id) {
-        return taskRepository.deleteById(id);
+    public void deleteTask(long id) {
+        getTaskOrThrow(id);
+        taskRepository.deleteById(id);
     }
 
     public boolean taskExists(long id) {
@@ -46,37 +51,32 @@ public class TaskService {
         return taskRepository.size();
     }
 
-    public boolean updateStatus(long id, TaskStatus status) {
-        Optional<Task> optionalTask = taskRepository.findById(id);
+    public void updateStatus(long id, TaskStatus status) {
+        validateStatus(status);
 
-        if (optionalTask.isEmpty()) {
-            return false;
-        }
-
-        optionalTask.get().setStatus(status);
-        return true;
+        Task task = getTaskOrThrow(id);
+        task.setStatus(status);
     }
 
-    public boolean updatePriority(long id, Priority priority) {
-        Optional<Task> optionalTask = taskRepository.findById(id);
+    public void updatePriority(long id, Priority priority) {
+        validatePriority(priority);
 
-        if (optionalTask.isEmpty()) {
-            return false;
-        }
-
-        optionalTask.get().setPriority(priority);
-        return true;
+        Task task = getTaskOrThrow(id);
+        task.setPriority(priority);
     }
 
-    public boolean updateTitle(long id, String title) {
-        Optional<Task> optionalTask = taskRepository.findById(id);
+    public void updateTitle(long id, String title) {
+        validateTitle(title);
 
-        if (optionalTask.isEmpty()) {
-            return false;
-        }
+        Task task = getTaskOrThrow(id);
+        task.setTitle(title);
+    }
 
-        optionalTask.get().setTitle(title);
-        return true;
+    public void updateDeadline(long id, LocalDate deadline) {
+        validateDeadline(deadline);
+
+        Task task = getTaskOrThrow(id);
+        task.setDeadline(deadline);
     }
 
     public List<Task> getTasksByStatus(TaskStatus status) {
@@ -175,5 +175,44 @@ public class TaskService {
                 .filter(task -> !task.getDeadline().isAfter(endDate))
                 .sorted(Comparator.comparing(Task::getDeadline))
                 .toList();
+    }
+
+    private Task getTaskOrThrow(long id) {
+        return taskRepository.findById(id)
+                .orElseThrow(() -> new TaskNotFoundException(id));
+    }
+
+    private void validateTask(String title, Priority priority, LocalDate deadline) {
+        validateTitle(title);
+        validatePriority(priority);
+        validateDeadline(deadline);
+    }
+
+    private void validateTitle(String title) {
+        if (title == null || title.isBlank()) {
+            throw new ValidationException("Название задачи не должно быть пустым");
+        }
+    }
+
+    private void validatePriority(Priority priority) {
+        if (priority == null) {
+            throw new ValidationException("Приоритет задачи не должен быть null");
+        }
+    }
+
+    private void validateStatus(TaskStatus status) {
+        if (status == null) {
+            throw new ValidationException("Статус задачи не должен быть null");
+        }
+    }
+
+    private void validateDeadline(LocalDate deadline) {
+        if (deadline == null) {
+            throw new ValidationException("Дедлайн задачи не должен быть null");
+        }
+
+        if (deadline.isBefore(LocalDate.now())) {
+            throw new ValidationException("Дедлайн задачи не может находиться в прошлом");
+        }
     }
 }
