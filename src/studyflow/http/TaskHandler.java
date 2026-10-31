@@ -2,24 +2,24 @@ package studyflow.http;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import studyflow.exception.TaskNotFoundException;
 import studyflow.exception.ValidationException;
 import studyflow.model.Priority;
 import studyflow.model.Task;
 import studyflow.model.TaskStatus;
 import studyflow.service.TaskPersistenceService;
 import studyflow.service.TaskService;
-import studyflow.util.FormDataParser;
 import studyflow.util.JsonUtil;
-import studyflow.util.QueryParamsParser;
+import studyflow.util.UrlEncodedParser;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.Locale;
 import java.util.Map;
 
 public class TaskHandler implements HttpHandler {
+
     private final TaskService taskService;
     private final TaskPersistenceService persistenceService;
 
@@ -31,7 +31,7 @@ public class TaskHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         try {
-            switch (exchange.getRequestMethod().toUpperCase()) {
+            switch (exchange.getRequestMethod().toUpperCase(Locale.ROOT)) {
                 case "GET" -> handleGet(exchange);
                 case "POST" -> handlePost(exchange);
                 case "PUT" -> handlePut(exchange);
@@ -41,13 +41,8 @@ public class TaskHandler implements HttpHandler {
                     HttpResponseUtil.sendJson(exchange, 405, JsonUtil.errorToJson("Метод не поддерживается"));
                 }
             }
-        } catch (TaskNotFoundException exception) {
-            HttpResponseUtil.sendJson(exchange, 404, JsonUtil.errorToJson(exception.getMessage()));
-        } catch (ValidationException exception) {
-            HttpResponseUtil.sendJson(exchange, 400, JsonUtil.errorToJson(exception.getMessage()));
         } catch (Exception exception) {
-            exception.printStackTrace();
-            HttpResponseUtil.sendJson(exchange, 500, JsonUtil.errorToJson("Внутренняя ошибка сервера"));
+            HttpExceptionHandler.handle(exchange, exception);
         }
     }
 
@@ -60,7 +55,7 @@ public class TaskHandler implements HttpHandler {
         }
 
         if (path.startsWith("/tasks/")) {
-            getTaskById(exchange, path);
+            getTaskById(exchange);
             return;
         }
 
@@ -97,11 +92,27 @@ public class TaskHandler implements HttpHandler {
 
         String title = values.get("title");
         String description = values.get("description");
-        TaskStatus status = values.containsKey("status") ? parseStatus(values.get("status")) : null;
-        Priority priority = values.containsKey("priority") ? parsePriority(values.get("priority")) : null;
-        LocalDate deadline = values.containsKey("deadline") ? parseDeadline(values.get("deadline")) : null;
 
-        Task task = taskService.updateTask(id, title, description, status, priority, deadline);
+        TaskStatus status = values.containsKey("status")
+                ? parseStatus(values.get("status"))
+                : null;
+
+        Priority priority = values.containsKey("priority")
+                ? parsePriority(values.get("priority"))
+                : null;
+
+        LocalDate deadline = values.containsKey("deadline")
+                ? parseDeadline(values.get("deadline"))
+                : null;
+
+        Task task = taskService.updateTask(
+                id,
+                title,
+                description,
+                status,
+                priority,
+                deadline
+        );
 
         persistenceService.save();
 
@@ -117,9 +128,44 @@ public class TaskHandler implements HttpHandler {
         HttpResponseUtil.sendEmpty(exchange, 204);
     }
 
+    private void getAllTasks(HttpExchange exchange) throws IOException {
+        Map<String, String> params = UrlEncodedParser.parse(
+                exchange.getRequestURI().getRawQuery()
+        );
+
+        TaskStatus status = params.containsKey("status")
+                ? parseStatus(params.get("status"))
+                : null;
+
+        Priority priority = params.containsKey("priority")
+                ? parsePriority(params.get("priority"))
+                : null;
+
+        String search = params.get("search");
+        String sort = params.get("sort");
+
+        String json = JsonUtil.tasksToJson(
+                taskService.findTasks(status, priority, search, sort)
+        );
+
+        HttpResponseUtil.sendJson(exchange, 200, json);
+    }
+
+    private void getTaskById(HttpExchange exchange) throws IOException {
+        long id = extractTaskId(exchange);
+
+        Task task = taskService.getTaskById(id);
+
+        HttpResponseUtil.sendJson(exchange, 200, JsonUtil.taskToJson(task));
+    }
+
     private Map<String, String> readForm(HttpExchange exchange) throws IOException {
-        String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        return FormDataParser.parse(body);
+        String body = new String(
+                exchange.getRequestBody().readAllBytes(),
+                StandardCharsets.UTF_8
+        );
+
+        return UrlEncodedParser.parse(body);
     }
 
     private long extractTaskId(HttpExchange exchange) {
@@ -148,7 +194,7 @@ public class TaskHandler implements HttpHandler {
         }
 
         try {
-            return Priority.valueOf(value.toUpperCase());
+            return Priority.valueOf(value.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException exception) {
             throw new ValidationException("Некорректный приоритет: " + value);
         }
@@ -160,7 +206,7 @@ public class TaskHandler implements HttpHandler {
         }
 
         try {
-            return TaskStatus.valueOf(value.toUpperCase());
+            return TaskStatus.valueOf(value.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException exception) {
             throw new ValidationException("Некорректный статус: " + value);
         }
@@ -174,37 +220,9 @@ public class TaskHandler implements HttpHandler {
         try {
             return LocalDate.parse(value);
         } catch (DateTimeParseException exception) {
-            throw new ValidationException("Некорректная дата: " + value + ". Используйте формат YYYY-MM-DD");
-        }
-    }
-
-    private void getAllTasks(HttpExchange exchange) throws IOException {
-        Map<String, String> params = QueryParamsParser.parse(exchange.getRequestURI().getRawQuery());
-
-        TaskStatus status = params.containsKey("status") ? parseStatus(params.get("status")) : null;
-        Priority priority = params.containsKey("priority") ? parsePriority(params.get("priority")) : null;
-        String search = params.get("search");
-        String sort = params.get("sort");
-
-        String json = JsonUtil.tasksToJson(taskService.findTasks(status, priority, search, sort));
-        HttpResponseUtil.sendJson(exchange, 200, json);
-    }
-
-    private void getTaskById(HttpExchange exchange, String path) throws IOException {
-        String idPart = path.substring("/tasks/".length());
-
-        if (idPart.isBlank() || idPart.contains("/")) {
-            HttpResponseUtil.sendJson(exchange, 404, JsonUtil.errorToJson("Ресурс не найден"));
-            return;
-        }
-
-        try {
-            long id = Long.parseLong(idPart);
-            Task task = taskService.getTaskById(id);
-
-            HttpResponseUtil.sendJson(exchange, 200, JsonUtil.taskToJson(task));
-        } catch (NumberFormatException exception) {
-            HttpResponseUtil.sendJson(exchange, 400, JsonUtil.errorToJson("Некорректный идентификатор задачи"));
+            throw new ValidationException(
+                    "Некорректная дата: " + value + ". Используйте формат YYYY-MM-DD"
+            );
         }
     }
 }
