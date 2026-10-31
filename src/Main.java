@@ -1,42 +1,30 @@
-import studyflow.model.Priority;
-import studyflow.model.TaskStatus;
+import studyflow.http.StudyFlowServer;
 import studyflow.repository.TaskRepository;
+import studyflow.service.TaskPersistenceService;
 import studyflow.service.TaskService;
+import studyflow.storage.TaskFileStorage;
 
-import java.time.LocalDate;
+import java.io.IOException;
+import java.nio.file.Path;
 
 public class Main {
-
     public static void main(String[] args) {
-        TaskService service = new TaskService(new TaskRepository());
+        TaskRepository repository = new TaskRepository();
+        TaskFileStorage fileStorage = new TaskFileStorage(Path.of("data", "tasks.txt"));
 
-        service.createTask("Изучить Collections", "List, Set и Map", Priority.HIGH, LocalDate.now().plusDays(2));
-        service.createTask("Изучить Stream API", "filter и sorted", Priority.HIGH, LocalDate.now().plusDays(5));
-        service.createTask("Изучить HTTP", "HttpServer и HttpClient", Priority.MEDIUM, LocalDate.now().plusDays(10));
-        service.createTask("Старая задача", "Просроченная задача", Priority.LOW, LocalDate.now().minusDays(3));
+        try {
+            fileStorage.load().forEach(repository::save);
 
-        service.updateStatus(2L, TaskStatus.IN_PROGRESS);
-        service.updateStatus(3L, TaskStatus.DONE);
+            TaskService taskService = new TaskService(repository);
+            TaskPersistenceService persistenceService = new TaskPersistenceService(taskService, fileStorage);
 
-        System.out.println("Все задачи:");
-        service.getAllTasks().forEach(System.out::println);
+            StudyFlowServer server = new StudyFlowServer(8080, taskService, persistenceService);
+            server.start();
 
-        System.out.println("\nHIGH:");
-        service.getTasksByPriority(Priority.HIGH).forEach(System.out::println);
-
-        System.out.println("\nПо дедлайну:");
-        service.getTasksSortedByDeadline().forEach(System.out::println);
-
-        System.out.println("\nПросроченные:");
-        service.getOverdueTasks().forEach(System.out::println);
-
-        System.out.println("\nПоиск \"stream\":");
-        service.searchByTitle("stream").forEach(System.out::println);
-
-        System.out.println("\nКоличество выполненных: " + service.getCompletedTaskCount());
-        System.out.println("Процент выполнения: " + service.getCompletionPercentage());
-
-        System.out.println("\nКоличество по статусам:");
-        service.countTasksByStatus().forEach((status, count) -> System.out.println(status + ": " + count));
+            System.out.println("StudyFlow запущен");
+            System.out.println("http://localhost:8080/tasks");
+        } catch (IOException exception) {
+            System.out.println("Ошибка запуска приложения: " + exception.getMessage());
+        }
     }
 }
