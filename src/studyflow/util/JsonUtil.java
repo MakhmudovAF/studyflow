@@ -1,5 +1,6 @@
 package studyflow.util;
 
+import studyflow.dto.TaskStatistics;
 import studyflow.model.Task;
 
 import java.util.List;
@@ -62,5 +63,37 @@ public final class JsonUtil {
                 .replace("\n", "\\n")
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
+    }
+
+    public static String statisticsToJson(TaskStatistics statistics) {
+        String nearestTaskJson = statistics.nearestTask() == null
+                ? "null"
+                : taskToJson(statistics.nearestTask());
+
+        return """
+                {
+                  "totalTasks": %d,
+                  "todoTasks": %d,
+                  "inProgressTasks": %d,
+                  "doneTasks": %d,
+                  "lowPriorityTasks": %d,
+                  "mediumPriorityTasks": %d,
+                  "highPriorityTasks": %d,
+                  "overdueTasks": %d,
+                  "completionPercentage": %s,
+                  "nearestTask": %s
+                }
+                """.formatted(
+                statistics.totalTasks(),
+                statistics.todoTasks(),
+                statistics.inProgressTasks(),
+                statistics.doneTasks(),
+                statistics.lowPriorityTasks(),
+                statistics.mediumPriorityTasks(),
+                statistics.highPriorityTasks(),
+                statistics.overdueTasks(),
+                Double.toString(statistics.completionPercentage()),
+                nearestTaskJson
+        );
     }
 }

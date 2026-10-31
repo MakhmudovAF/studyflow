@@ -1,5 +1,6 @@
 import studyflow.http.StudyFlowServer;
 import studyflow.repository.TaskRepository;
+import studyflow.service.StatisticsService;
 import studyflow.service.TaskPersistenceService;
 import studyflow.service.TaskService;
 import studyflow.storage.TaskFileStorage;
@@ -16,9 +17,15 @@ public class Main {
             fileStorage.load().forEach(repository::save);
 
             TaskService taskService = new TaskService(repository);
+            StatisticsService statisticsService = new StatisticsService(repository);
             TaskPersistenceService persistenceService = new TaskPersistenceService(taskService, fileStorage);
 
-            StudyFlowServer server = new StudyFlowServer(8080, taskService, persistenceService);
+            StudyFlowServer server = new StudyFlowServer(
+                    8080,
+                    taskService,
+                    statisticsService,
+                    persistenceService
+            );
             server.start();
 
             System.out.println("StudyFlow запущен");

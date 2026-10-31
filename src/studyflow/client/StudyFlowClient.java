@@ -87,6 +87,15 @@ public class StudyFlowClient {
         return send(request);
     }
 
+    public HttpResponse<String> getStatistics() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/statistics"))
+                .GET()
+                .build();
+
+        return send(request);
+    }
+
     private HttpResponse<String> send(HttpRequest request) throws IOException, InterruptedException {
         return client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
     }

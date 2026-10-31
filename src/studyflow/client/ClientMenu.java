@@ -31,6 +31,7 @@ public class ClientMenu {
                     case "4" -> updateTask();
                     case "5" -> deleteTask();
                     case "6" -> filterTasks();
+                    case "7" -> showStatistics();
                     case "0" -> running = false;
                     default -> System.out.println("Неизвестная команда");
                 }
@@ -58,6 +59,7 @@ public class ClientMenu {
                 4. Изменить задачу
                 5. Удалить задачу
                 6. Фильтрация и поиск
+                7. Показать статистику
                 0. Выход
                 """);
         System.out.print("> ");
@@ -149,6 +151,11 @@ public class ClientMenu {
         putIfNotBlank(parameters, "sort", scanner.nextLine());
 
         HttpResponse<String> response = client.getTasks(parameters);
+        printResponse(response);
+    }
+
+    private void showStatistics() throws IOException, InterruptedException {
+        HttpResponse<String> response = client.getStatistics();
         printResponse(response);
     }
 

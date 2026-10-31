@@ -152,56 +152,12 @@ public class TaskService {
                 .toList();
     }
 
-    public Optional<Task> getNearestTask() {
-        LocalDate today = LocalDate.now();
-
-        return taskRepository.findAll().stream()
-                .filter(task -> task.getStatus() != TaskStatus.DONE)
-                .filter(task -> !task.getDeadline().isBefore(today))
-                .min(Comparator.comparing(Task::getDeadline));
-    }
-
     public List<Task> searchByTitle(String query) {
         String normalizedQuery = query.toLowerCase();
 
         return taskRepository.findAll().stream()
                 .filter(task -> task.getTitle().toLowerCase().contains(normalizedQuery))
                 .toList();
-    }
-
-    public long getCompletedTaskCount() {
-        return taskRepository.findAll().stream()
-                .filter(task -> task.getStatus() == TaskStatus.DONE)
-                .count();
-    }
-
-    public double getCompletionPercentage() {
-        List<Task> tasks = taskRepository.findAll();
-
-        if (tasks.isEmpty()) {
-            return 0.0;
-        }
-
-        long completed = tasks.stream()
-                .filter(task -> task.getStatus() == TaskStatus.DONE)
-                .count();
-
-        return completed * 100.0 / tasks.size();
-    }
-
-    public Map<TaskStatus, List<Task>> groupTasksByStatus() {
-        return taskRepository.findAll().stream()
-                .collect(Collectors.groupingBy(Task::getStatus));
-    }
-
-    public Map<TaskStatus, Long> countTasksByStatus() {
-        return taskRepository.findAll().stream()
-                .collect(Collectors.groupingBy(Task::getStatus, Collectors.counting()));
-    }
-
-    public Map<Priority, Long> countTasksByPriority() {
-        return taskRepository.findAll().stream()
-                .collect(Collectors.groupingBy(Task::getPriority, Collectors.counting()));
     }
 
     public List<Task> getUpcomingTasks(int days) {
