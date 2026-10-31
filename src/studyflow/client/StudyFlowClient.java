@@ -20,12 +20,7 @@ public class StudyFlowClient {
     }
 
     public HttpResponse<String> getAllTasks() throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + "/tasks"))
-                .GET()
-                .build();
-
-        return send(request);
+        return getTasks(Map.of());
     }
 
     public HttpResponse<String> getTaskById(long id) throws IOException, InterruptedException {
@@ -72,6 +67,21 @@ public class StudyFlowClient {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/tasks/" + id))
                 .DELETE()
+                .build();
+
+        return send(request);
+    }
+
+    public HttpResponse<String> getTasks(Map<String, String> parameters) throws IOException, InterruptedException {
+        String url = baseUrl + "/tasks";
+
+        if (!parameters.isEmpty()) {
+            url += "?" + encodeForm(parameters);
+        }
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
                 .build();
 
         return send(request);

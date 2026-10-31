@@ -30,6 +30,10 @@ public final class JsonUtil {
     }
 
     public static String tasksToJson(List<Task> tasks) {
+        if (tasks.isEmpty()) {
+            return "[]";
+        }
+
         return tasks.stream()
                 .map(JsonUtil::taskToJson)
                 .collect(Collectors.joining(",\n", "[\n", "\n]"));

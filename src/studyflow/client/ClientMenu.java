@@ -30,6 +30,7 @@ public class ClientMenu {
                     case "3" -> createTask();
                     case "4" -> updateTask();
                     case "5" -> deleteTask();
+                    case "6" -> filterTasks();
                     case "0" -> running = false;
                     default -> System.out.println("Неизвестная команда");
                 }
@@ -56,6 +57,7 @@ public class ClientMenu {
                 3. Создать задачу
                 4. Изменить задачу
                 5. Удалить задачу
+                6. Фильтрация и поиск
                 0. Выход
                 """);
         System.out.print("> ");
@@ -126,6 +128,27 @@ public class ClientMenu {
             return;
         }
 
+        printResponse(response);
+    }
+
+    private void filterTasks() throws IOException, InterruptedException {
+        Map<String, String> parameters = new HashMap<>();
+
+        System.out.println("Оставьте поле пустым, если фильтр не нужен.");
+
+        System.out.print("Статус (TODO/IN_PROGRESS/DONE): ");
+        putIfNotBlank(parameters, "status", scanner.nextLine());
+
+        System.out.print("Приоритет (LOW/MEDIUM/HIGH): ");
+        putIfNotBlank(parameters, "priority", scanner.nextLine());
+
+        System.out.print("Поиск: ");
+        putIfNotBlank(parameters, "search", scanner.nextLine());
+
+        System.out.print("Сортировка (deadline/title/priority): ");
+        putIfNotBlank(parameters, "sort", scanner.nextLine());
+
+        HttpResponse<String> response = client.getTasks(parameters);
         printResponse(response);
     }
 

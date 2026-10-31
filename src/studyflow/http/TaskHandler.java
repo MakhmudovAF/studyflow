@@ -11,6 +11,7 @@ import studyflow.service.TaskPersistenceService;
 import studyflow.service.TaskService;
 import studyflow.util.FormDataParser;
 import studyflow.util.JsonUtil;
+import studyflow.util.QueryParamsParser;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -178,7 +179,14 @@ public class TaskHandler implements HttpHandler {
     }
 
     private void getAllTasks(HttpExchange exchange) throws IOException {
-        String json = JsonUtil.tasksToJson(taskService.getAllTasks());
+        Map<String, String> params = QueryParamsParser.parse(exchange.getRequestURI().getRawQuery());
+
+        TaskStatus status = params.containsKey("status") ? parseStatus(params.get("status")) : null;
+        Priority priority = params.containsKey("priority") ? parsePriority(params.get("priority")) : null;
+        String search = params.get("search");
+        String sort = params.get("sort");
+
+        String json = JsonUtil.tasksToJson(taskService.findTasks(status, priority, search, sort));
         HttpResponseUtil.sendJson(exchange, 200, json);
     }
 
