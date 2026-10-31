@@ -20,4 +20,9 @@ public final class HttpResponseUtil {
             outputStream.write(response);
         }
     }
+
+    public static void sendEmpty(HttpExchange exchange, int statusCode) throws IOException {
+        exchange.sendResponseHeaders(statusCode, -1);
+        exchange.close();
+    }
 }

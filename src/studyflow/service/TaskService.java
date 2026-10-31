@@ -83,6 +83,44 @@ public class TaskService {
         task.setDeadline(deadline);
     }
 
+    public Task updateTask(long id, String title, String description, TaskStatus status, Priority priority, LocalDate deadline) {
+        Task task = getTaskOrThrow(id);
+
+        if (title == null && description == null && status == null && priority == null && deadline == null) {
+            throw new ValidationException("Не передано ни одного поля для обновления");
+        }
+
+        if (title != null) {
+            validateTitle(title);
+        }
+
+        if (deadline != null) {
+            validateDeadline(deadline);
+        }
+
+        if (title != null) {
+            task.setTitle(title);
+        }
+
+        if (description != null) {
+            task.setDescription(description);
+        }
+
+        if (status != null) {
+            task.setStatus(status);
+        }
+
+        if (priority != null) {
+            task.setPriority(priority);
+        }
+
+        if (deadline != null) {
+            task.setDeadline(deadline);
+        }
+
+        return task;
+    }
+
     public List<Task> getTasksByStatus(TaskStatus status) {
         return taskRepository.findAll().stream()
                 .filter(task -> task.getStatus() == status)
