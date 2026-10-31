@@ -5,24 +5,24 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-public final class QueryParamsParser {
-    private QueryParamsParser() {
+public final class UrlEncodedParser {
+    private UrlEncodedParser() {
     }
 
-    public static Map<String, String> parse(String query) {
+    public static Map<String, String> parse(String value) {
         Map<String, String> parameters = new HashMap<>();
 
-        if (query == null || query.isBlank()) {
+        if (value == null || value.isBlank()) {
             return parameters;
         }
 
-        for (String parameter : query.split("&")) {
+        for (String parameter : value.split("&")) {
             String[] parts = parameter.split("=", 2);
 
             String key = decode(parts[0]);
-            String value = parts.length == 2 ? decode(parts[1]) : "";
+            String parameterValue = parts.length == 2 ? decode(parts[1]) : "";
 
-            parameters.put(key, value);
+            parameters.put(key, parameterValue);
         }
 
         return parameters;

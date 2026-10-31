@@ -36,8 +36,7 @@ public class StatisticsHandler implements HttpHandler {
 
             HttpResponseUtil.sendJson(exchange, 200, JsonUtil.statisticsToJson(statistics));
         } catch (Exception exception) {
-            exception.printStackTrace();
-            HttpResponseUtil.sendJson(exchange, 500, JsonUtil.errorToJson("Внутренняя ошибка сервера"));
+            HttpExceptionHandler.handle(exchange, exception);
         }
     }
 }
