@@ -8,10 +8,7 @@ import studyflow.model.TaskStatus;
 import studyflow.repository.Repository;
 
 import java.time.LocalDate;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TaskService {
@@ -155,56 +152,12 @@ public class TaskService {
                 .toList();
     }
 
-    public Optional<Task> getNearestTask() {
-        LocalDate today = LocalDate.now();
-
-        return taskRepository.findAll().stream()
-                .filter(task -> task.getStatus() != TaskStatus.DONE)
-                .filter(task -> !task.getDeadline().isBefore(today))
-                .min(Comparator.comparing(Task::getDeadline));
-    }
-
     public List<Task> searchByTitle(String query) {
         String normalizedQuery = query.toLowerCase();
 
         return taskRepository.findAll().stream()
                 .filter(task -> task.getTitle().toLowerCase().contains(normalizedQuery))
                 .toList();
-    }
-
-    public long getCompletedTaskCount() {
-        return taskRepository.findAll().stream()
-                .filter(task -> task.getStatus() == TaskStatus.DONE)
-                .count();
-    }
-
-    public double getCompletionPercentage() {
-        List<Task> tasks = taskRepository.findAll();
-
-        if (tasks.isEmpty()) {
-            return 0.0;
-        }
-
-        long completed = tasks.stream()
-                .filter(task -> task.getStatus() == TaskStatus.DONE)
-                .count();
-
-        return completed * 100.0 / tasks.size();
-    }
-
-    public Map<TaskStatus, List<Task>> groupTasksByStatus() {
-        return taskRepository.findAll().stream()
-                .collect(Collectors.groupingBy(Task::getStatus));
-    }
-
-    public Map<TaskStatus, Long> countTasksByStatus() {
-        return taskRepository.findAll().stream()
-                .collect(Collectors.groupingBy(Task::getStatus, Collectors.counting()));
-    }
-
-    public Map<Priority, Long> countTasksByPriority() {
-        return taskRepository.findAll().stream()
-                .collect(Collectors.groupingBy(Task::getPriority, Collectors.counting()));
     }
 
     public List<Task> getUpcomingTasks(int days) {
@@ -256,5 +209,37 @@ public class TaskService {
         if (deadline.isBefore(LocalDate.now())) {
             throw new ValidationException("Дедлайн задачи не может находиться в прошлом");
         }
+    }
+
+    public List<Task> findTasks(TaskStatus status, Priority priority, String search, String sort) {
+        var stream = taskRepository.findAll().stream();
+
+        if (status != null) {
+            stream = stream.filter(task -> task.getStatus() == status);
+        }
+
+        if (priority != null) {
+            stream = stream.filter(task -> task.getPriority() == priority);
+        }
+
+        if (search != null && !search.isBlank()) {
+            String normalizedSearch = search.toLowerCase(Locale.ROOT);
+
+            stream = stream.filter(task ->
+                    task.getTitle().toLowerCase(Locale.ROOT).contains(normalizedSearch)
+                            || task.getDescription().toLowerCase(Locale.ROOT).contains(normalizedSearch)
+            );
+        }
+
+        if (sort != null) {
+            stream = switch (sort) {
+                case "deadline" -> stream.sorted(Comparator.comparing(Task::getDeadline));
+                case "title" -> stream.sorted(Comparator.comparing(Task::getTitle, String.CASE_INSENSITIVE_ORDER));
+                case "priority" -> stream.sorted(Comparator.comparing(Task::getPriority).reversed());
+                default -> throw new ValidationException("Неизвестный способ сортировки: " + sort);
+            };
+        }
+
+        return stream.toList();
     }
 }

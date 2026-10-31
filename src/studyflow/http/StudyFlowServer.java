@@ -1,6 +1,7 @@
 package studyflow.http;
 
 import com.sun.net.httpserver.HttpServer;
+import studyflow.service.StatisticsService;
 import studyflow.service.TaskPersistenceService;
 import studyflow.service.TaskService;
 
@@ -10,9 +11,13 @@ import java.net.InetSocketAddress;
 public class StudyFlowServer {
     private final HttpServer server;
 
-    public StudyFlowServer(int port, TaskService taskService, TaskPersistenceService persistenceService) throws IOException {
+    public StudyFlowServer(int port, TaskService taskService, StatisticsService statisticsService,
+                           TaskPersistenceService persistenceService) throws IOException {
         server = HttpServer.create(new InetSocketAddress(port), 0);
+
         server.createContext("/tasks", new TaskHandler(taskService, persistenceService));
+        server.createContext("/statistics", new StatisticsHandler(statisticsService));
+
         server.setExecutor(null);
     }
 
